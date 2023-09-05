@@ -7,8 +7,15 @@
 #include <netinet/in.h>
 #include <errno.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 int main(int argc, char ** argv) {
+    
+    if (argc != 2) {
+        printf("must pass in a msg\n");
+        exit(1);
+    }
+
     struct addrinfo hints, *res;
     int sockfd;
 
@@ -40,7 +47,7 @@ int main(int argc, char ** argv) {
 
     // send to socket
     
-    char * msg = "touch get_hacked.txt";
+    char * msg = argv[1];
     
     if (send(sockfd, msg, strlen(msg), 0) == - 1) {
         printf("error: %d\n", errno);
@@ -49,6 +56,5 @@ int main(int argc, char ** argv) {
     }
     
     printf("msg sent\n");
-    close(sockfd);
     return 0;
 }

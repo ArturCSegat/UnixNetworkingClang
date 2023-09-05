@@ -36,7 +36,7 @@ int main(int argc, char ** argv) {
     int r;
     if ((r = getaddrinfo(NULL, PORT, &hints, &res)) == - 1) {
         printf("error: %d\n", errno);
-        perror("Message from perror");
+        perror("addr info");
         return -1;
     }
 
@@ -48,7 +48,7 @@ int main(int argc, char ** argv) {
 
     if ((r = bind(sockfd, res->ai_addr, res->ai_addrlen)) == - 1) {
         printf("error: %d\n", errno);
-        perror("Message from perror");
+        perror("bind");
         return -1;
     }
     freeaddrinfo(res);
@@ -57,34 +57,49 @@ int main(int argc, char ** argv) {
     printf("listening:...\n");
     if ((r = listen(sockfd, MAX_QUEUE)) == - 1) {
         printf("error: %d\n", errno);
-        perror("Message from perror");
+        perror("listen");
         return -1;
     }
     
     // accept connect
     
-    struct sockaddr entry_info;
-    socklen_t addr_len = sizeof(entry_info);
+    while (1) {
+        struct sockaddr entry_info;
+        socklen_t addr_len = sizeof(entry_info);
 
-    int new_fd;
-    if ((new_fd = accept(sockfd, &entry_info, &addr_len) == - 1)) {
-        printf("error: %d\n", errno);
-        perror("Message from perror");
-        return -1;
+        int new_fd = accept(sockfd, &entry_info, &addr_len);
+        if (new_fd == -1) {
+            printf("error: %d\n", errno);
+            perror("accept");
+            return -1;
+        }
+
+        char s[INET6_ADDRSTRLEN];
+        inet_ntop(entry_info.sa_family, get_in_addr((struct sockaddr *)&entry_info), s, sizeof(s)); 
+        printf("got a connection from %s\n", s); 
+
+        char buff[200];
+        int buf_len = sizeof(buff);
+
+        if (recv(new_fd, buff, buf_len, 0) == - 1) {
+            printf("error: %d\n", errno);
+            perror("recv");
+            return -1;
+        }
+
+        buff[buf_len] = '\0';
+
+        if (strcmp(buff, "quit") == 0){
+            printf("closing server");
+            close(new_fd);
+            close(sockfd);
+            exit(0);
+        }
+
+        printf("received: %s\n", buff);
+        memset(&buff, 0, sizeof(buff));
+        close(new_fd);
     }
-    
-    char s[INET6_ADDRSTRLEN];
-    inet_ntop(entry_info.sa_family, get_in_addr((struct sockaddr *)&entry_info), s, strlen(s)); 
-    printf("got a connection from %s\n", s); 
-
-    char buff[69];
-    int buf_len = sizeof(buff);
-
-    recv(new_fd, buff, buf_len, 0);
-    buff[buf_len] = '\0';
-    
-    system(buff);
     close(sockfd);
-    close(new_fd);
     return 0;
 }
